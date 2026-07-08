@@ -7,11 +7,12 @@ import { useData } from '../context/DataContext'
 // Authentication > Users, then set each member's email in the `members`
 // table to match (see schema.sql / README).
 export default function LoginGate({ children }) {
-  const { session, authLoading, authError, signIn, currentMember } = useAuth()
-  const { loading: dataLoading, loadError } = useData()
+  const { session, authLoading, authError, signIn, logout, currentMember } = useAuth()
+  const { loading: dataLoading, loadError, refresh } = useData()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   if (authLoading || (session && dataLoading)) {
     return (
@@ -24,6 +25,15 @@ export default function LoginGate({ children }) {
   if (session && currentMember) return children
 
   if (session && !currentMember) {
+    async function handleRetry() {
+      setRetrying(true)
+      try {
+        await refresh()
+      } finally {
+        setRetrying(false)
+      }
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center">
@@ -33,6 +43,24 @@ export default function LoginGate({ children }) {
             group has that email set. Ask whoever set up the database to update their row in the
             <code className="mx-1 bg-gray-100 px-1 rounded">members</code> table.
           </p>
+          <p className="text-xs text-gray-400 mt-3">
+            Just fixed it in Supabase? Click Retry -- no need to sign out and back in.
+          </p>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="flex-1 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50"
+            >
+              {retrying ? 'Checking…' : 'Retry'}
+            </button>
+            <button
+              onClick={logout}
+              className="flex-1 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -41,7 +69,7 @@ export default function LoginGate({ children }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
-    await signIn(email, password)
+    await signIn(email.trim(), password)
     setSubmitting(false)
   }
 

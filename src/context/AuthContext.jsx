@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async (email, password) => {
     setAuthError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: (email || '').trim(), password })
     if (error) {
       setAuthError(error.message)
       return false
@@ -41,9 +41,11 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }, [])
 
-  const authedEmail = session?.user?.email || null
+  // Trimmed + lowercased on both sides -- a stray space copy-pasted into
+  // either the members table or the login form shouldn't break the match.
+  const authedEmail = session?.user?.email ? session.user.email.trim().toLowerCase() : null
   const currentMember = authedEmail
-    ? members.find((m) => (m.email || '').toLowerCase() === authedEmail.toLowerCase()) || null
+    ? members.find((m) => (m.email || '').trim().toLowerCase() === authedEmail) || null
     : null
 
   const value = {
