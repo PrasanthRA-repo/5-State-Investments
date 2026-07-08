@@ -12,7 +12,13 @@ import {
 } from '../constants'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { useSnackbar } from '../context/SnackbarContext'
 import { memberIdleCash, splitByWeights } from '../utils/calculations'
+import Card from './ui/Card'
+import Button from './ui/Button'
+import TextField from './ui/TextField'
+import Select from './ui/Select'
+import Icon from './ui/Icon'
 
 const emptyForm = {
   date: new Date().toISOString().slice(0, 10),
@@ -49,6 +55,7 @@ function uid() {
 export default function TransactionForm({ editingTx, onDoneEditing }) {
   const { members, transactions, addTransaction, updateTransaction } = useData()
   const { currentMemberId } = useAuth()
+  const { showSnackbar } = useSnackbar()
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -164,6 +171,7 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
         }
 
         setForm({ ...emptyForm, member_id: currentMemberId || '' })
+        showSnackbar(`Added ${members.length} transactions.`, { type: 'success' })
         return
       }
 
@@ -176,12 +184,15 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
       if (editingTx) {
         await updateTransaction(editingTx.id, payload)
         onDoneEditing?.()
+        showSnackbar('Transaction updated.', { type: 'success' })
       } else {
         await addTransaction(payload)
         setForm({ ...emptyForm, member_id: currentMemberId || '' })
+        showSnackbar('Transaction added.', { type: 'success' })
       }
     } catch (err) {
       setError(err.message || 'Something went wrong saving this transaction.')
+      showSnackbar(err.message || 'Something went wrong saving this transaction.', { type: 'error' })
     } finally {
       setSubmitting(false)
     }
@@ -196,27 +207,28 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
   const collectorName = form.collected_by ? members.find((m) => m.id === form.collected_by)?.name : null
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-      <h2 className="text-base font-semibold text-gray-900 mb-4">
+    <Card as="form" onSubmit={handleSubmit}>
+      <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">
         {editingTx ? 'Edit transaction' : 'Add transaction'}
       </h2>
 
       {error && (
-        <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          {error}
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+          <Icon name="error" className="mt-0.5 text-[18px]" />
+          <span>{error}</span>
         </div>
       )}
 
       {previewShares && (
-        <div className="mb-4 text-sm text-brand-700 bg-brand-50 border border-brand-100 rounded-lg px-3 py-2">
+        <div className="mb-4 rounded-xl border border-primary-100 bg-primary-50 px-3 py-2 text-sm text-primary-700 dark:border-primary-900/40 dark:bg-primary-900/20 dark:text-primary-200">
           <p className="font-medium">
             Will create {members.length} transactions ({isOutflow ? 'split by current idle cash held' : 'split equally'}):
           </p>
-          <p className="text-xs mt-1">
+          <p className="mt-1 text-xs">
             {members.map((m, i) => `${m.name}: ₹${previewShares[i].toLocaleString('en-IN')}`).join('  ·  ')}
           </p>
           {collectorName && (
-            <p className="text-xs mt-2 text-brand-800">
+            <p className="mt-2 text-xs text-primary-800 dark:text-primary-200">
               Then auto-transferring everyone else's share to <strong>{collectorName}</strong>, since they're the one
               who actually collected the cash -- everyone still gets credit for their equal share, but only{' '}
               {collectorName}'s idle cash actually goes up.
@@ -225,151 +237,114 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Date">
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            className="input"
-          />
-        </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <TextField
+          label="Date"
+          type="date"
+          value={form.date}
+          onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+        />
 
-        <Field label="Type">
-          <select
-            value={form.type}
-            onChange={(e) => handleTypeChange(e.target.value)}
-            className="input"
-          >
-            {TRANSACTION_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <Select label="Type" value={form.type} onChange={(e) => handleTypeChange(e.target.value)}>
+          {TRANSACTION_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </Select>
 
-        <Field label={isTransfer ? 'From member' : 'Member'}>
-          <select
-            value={form.member_id}
-            onChange={(e) => handleMemberChange(e.target.value)}
-            className="input"
+        <Select
+          label={isTransfer ? 'From member' : 'Member'}
+          value={form.member_id}
+          onChange={(e) => handleMemberChange(e.target.value)}
+        >
+          <option value="">Select member</option>
+          {!isTransfer && <option value={EVERYONE_VALUE}>Everyone (split equally)</option>}
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </Select>
+
+        {isTransfer && (
+          <Select
+            label="To member"
+            value={form.to_member_id}
+            onChange={(e) => setForm((f) => ({ ...f, to_member_id: e.target.value }))}
           >
             <option value="">Select member</option>
-            {!isTransfer && (
-              <option value={EVERYONE_VALUE}>Everyone (split equally)</option>
-            )}
+            {members
+              .filter((m) => m.id !== form.member_id)
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+          </Select>
+        )}
+
+        {showCollectedBy && (
+          <Select
+            label="Collected by (optional)"
+            value={form.collected_by}
+            onChange={(e) => setForm((f) => ({ ...f, collected_by: e.target.value }))}
+          >
+            <option value="">— leave split across everyone —</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}
-          </select>
-        </Field>
-
-        {isTransfer && (
-          <Field label="To member">
-            <select
-              value={form.to_member_id}
-              onChange={(e) => setForm((f) => ({ ...f, to_member_id: e.target.value }))}
-              className="input"
-            >
-              <option value="">Select member</option>
-              {members
-                .filter((m) => m.id !== form.member_id)
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-            </select>
-          </Field>
+          </Select>
         )}
 
-        {showCollectedBy && (
-          <Field label="Collected by (optional)">
-            <select
-              value={form.collected_by}
-              onChange={(e) => setForm((f) => ({ ...f, collected_by: e.target.value }))}
-              className="input"
-            >
-              <option value="">— leave split across everyone —</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
+        <Select label="Category" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </Select>
 
-        <Field label="Category">
-          <select
-            value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            className="input"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <TextField
+          label={isEveryone ? 'Total amount (₹)' : 'Amount (₹)'}
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.amount}
+          onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+          placeholder="0"
+        />
 
-        <Field label={isEveryone ? 'Total amount (₹)' : 'Amount (₹)'}>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.amount}
-            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-            className="input"
-            placeholder="0"
-          />
-        </Field>
+        <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </Select>
 
-        <Field label="Status">
-          <select
-            value={form.status}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-            className="input"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <TextField
+          label="Linked asset (optional)"
+          type="text"
+          value={form.linked_asset}
+          onChange={(e) => setForm((f) => ({ ...f, linked_asset: e.target.value }))}
+          placeholder="e.g. INFY, Flat 3B, loan to Kumar"
+        />
 
-        <Field label="Linked asset (optional)">
-          <input
-            type="text"
-            value={form.linked_asset}
-            onChange={(e) => setForm((f) => ({ ...f, linked_asset: e.target.value }))}
-            className="input"
-            placeholder="e.g. INFY, Flat 3B, loan to Kumar"
-          />
-        </Field>
-
-        <Field label="Notes (optional)" full>
-          <input
-            type="text"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            className="input"
-            placeholder="Any extra detail"
-          />
-        </Field>
+        <TextField
+          label="Notes (optional)"
+          full
+          type="text"
+          value={form.notes}
+          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          placeholder="Any extra detail"
+        />
       </div>
 
-      <div className="flex gap-2 mt-5">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50"
-        >
+      <div className="mt-5 flex gap-2">
+        <Button type="submit" variant="filled" loading={submitting}>
           {submitting
             ? 'Saving…'
             : editingTx
@@ -377,26 +352,13 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
             : isEveryone
             ? `Add ${members.length} transactions`
             : 'Add transaction'}
-        </button>
+        </Button>
         {editingTx && (
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-          >
+          <Button type="button" variant="outlined" onClick={handleCancel}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
-    </form>
-  )
-}
-
-function Field({ label, children, full }) {
-  return (
-    <label className={`block ${full ? 'sm:col-span-2' : ''}`}>
-      <span className="block text-xs font-medium text-gray-600 mb-1">{label}</span>
-      {children}
-    </label>
+    </Card>
   )
 }

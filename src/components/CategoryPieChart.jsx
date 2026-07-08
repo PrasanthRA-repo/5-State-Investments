@@ -1,6 +1,7 @@
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { CATEGORY_COLORS } from '../constants'
 import { formatCurrency } from '../utils/calculations'
+import EmptyState from './ui/EmptyState'
 
 export default function CategoryPieChart({ byCategory }) {
   const data = Object.entries(byCategory)
@@ -8,20 +9,13 @@ export default function CategoryPieChart({ byCategory }) {
     .filter((d) => d.value > 0)
 
   if (data.length === 0) {
-    return <div className="text-sm text-gray-400 text-center py-10">No portfolio value yet — add some transactions.</div>
+    return <EmptyState icon="pie_chart" title="No portfolio value yet" subtitle="Add some transactions to see a breakdown." />
   }
 
   return (
     <ResponsiveContainer width="100%" height={260}>
       <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={55}
-          outerRadius={90}
-          paddingAngle={2}
-        >
+        <Pie data={data} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
           {data.map((d) => (
             <Cell key={d.name} fill={CATEGORY_COLORS[d.name] || '#94a3b8'} />
           ))}

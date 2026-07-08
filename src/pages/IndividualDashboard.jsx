@@ -6,12 +6,8 @@ import MemberTransactionHistory from '../components/MemberTransactionHistory'
 import StatCard from '../components/StatCard'
 import CategoryPieChart from '../components/CategoryPieChart'
 import IdleCashCards from '../components/IdleCashCards'
-import {
-  memberContribution,
-  memberOwnershipPct,
-  memberHoldingsShare,
-  formatCurrency,
-} from '../utils/calculations'
+import Card from '../components/ui/Card'
+import { memberContribution, memberOwnershipPct, memberHoldingsShare, formatCurrency } from '../utils/calculations'
 
 export default function IndividualDashboard() {
   const { members, transactions, holdings } = useData()
@@ -23,9 +19,7 @@ export default function IndividualDashboard() {
 
   if (!member) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center text-gray-500">
-        No members yet.
-      </div>
+      <Card className="text-center text-slate-500 dark:text-slate-400">No members yet.</Card>
     )
   }
 
@@ -36,27 +30,39 @@ export default function IndividualDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Viewing: {member.name}</h2>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Viewing: {member.name}</h2>
         <MemberSelector value={memberId} onChange={setSelectedId} />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total contribution (all-time)" value={formatCurrency(contribution)} />
-        <StatCard label="Ownership % of group" value={`${ownershipPct.toFixed(1)}%`} sub="Contribution ÷ total pool" />
-        <StatCard label="Share of current holdings" value={formatCurrency(totalShareValue)} sub="At their ownership %" />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard icon="paid" label="Total contribution (all-time)" value={formatCurrency(contribution)} />
+        <StatCard
+          icon="percent"
+          label="Ownership % of group"
+          value={`${ownershipPct.toFixed(1)}%`}
+          sub="Contribution ÷ total pool"
+        />
+        <StatCard
+          icon="account_balance_wallet"
+          label="Share of current holdings"
+          value={formatCurrency(totalShareValue)}
+          sub="At their ownership %"
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-2">Their holdings share by category</h2>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+            Their holdings share by category
+          </h2>
           <CategoryPieChart byCategory={holdingsShare} />
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-2">Personal transaction history</h2>
+        <Card>
+          <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">Personal transaction history</h2>
           <MemberTransactionHistory memberId={memberId} />
-        </div>
+        </Card>
       </div>
 
       <IdleCashCards />

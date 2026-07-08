@@ -87,6 +87,7 @@ A few things worth knowing:
 - **Projects** (`/projects`) — a simple standalone board for jotting down project ideas, shown as cards. Each card has a Active/Hold/Closed status, a running comment thread (each comment can carry its own date, and can be edited or deleted), and a comment box with a date picker. Not linked to transactions, holdings, or any of the financial numbers elsewhere in the app — just a shared scratchpad.
 - **Login** — real Supabase email/password (see step 3 above). No public sign-up screen on purpose; accounts are created by whoever set up the project.
 - **Responsive design** — stacked-card layouts on mobile for tables, safe-area padding for notched phones, and an "Add to Home Screen" friendly setup.
+- **Material Design 3 look** — a full visual redesign: light/dark mode (toggle in the top-right of the header, remembers your choice), Inter type + Material Symbols icons, a top app bar with a left navigation rail on tablet/desktop and a bottom nav bar on mobile, redesigned cards/buttons/inputs with rounded corners and subtle elevation/motion, in-app confirmation dialogs and toast notifications in place of the browser's native confirm()/alert() popups, and skeleton/empty-state placeholders. All the underlying data and calculations are unchanged — this only changes how it looks.
 
 Note: an earlier experimental "live stock price sync" via Twelve Data was removed — their free tier doesn't cover NSE/India data (confirmed via live testing, would need their paid "Grow" plan or higher), so it wasn't useful here. Stock Market holdings still track ticker/quantity/average price; current value is just updated manually like every other category.
 
@@ -101,3 +102,5 @@ Note: an earlier experimental "live stock price sync" via Twelve Data was remove
 Full definitions + RLS policies are in `schema.sql`.
 
 ## Tech stack
+
+React + Vite + Tailwind CSS + Recharts + React Router + Supabase (Postgres, Auth, Realtime). Fonts/icons (Inter + Material Symbols) load from Google Fonts, so the device needs an internet connection the first time it opens the app (they're cached after that).

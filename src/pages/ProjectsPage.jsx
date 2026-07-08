@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { useSnackbar } from '../context/SnackbarContext'
 import ProjectCard from '../components/ProjectCard'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import TextField from '../components/ui/TextField'
+import EmptyState from '../components/ui/EmptyState'
+import Icon from '../components/ui/Icon'
 
 // A simple shared board for jotting down project ideas and leaving comments.
 // Deliberately standalone -- no link to transactions, holdings, or the other
@@ -19,6 +25,7 @@ export default function ProjectsPage() {
     deleteProjectComment,
   } = useData()
   const { currentMemberId } = useAuth()
+  const { showSnackbar } = useSnackbar()
   const [name, setName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -31,8 +38,10 @@ export default function ProjectsPage() {
     try {
       await addProject({ name: name.trim(), created_by: currentMemberId || null, status: 'Active' })
       setName('')
+      showSnackbar('Project added.', { type: 'success' })
     } catch (err) {
       setError(err.message || 'Failed to add project.')
+      showSnackbar(err.message || 'Failed to add project.', { type: 'error' })
     } finally {
       setSubmitting(false)
     }
@@ -52,41 +61,39 @@ export default function ProjectsPage() {
   }
 
   const commentsByProject = (projectId) =>
-    projectComments
-      .filter((c) => c.project_id === projectId)
-      .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
+    projectComments.filter((c) => c.project_id === projectId).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Projects</h2>
-        <p className="text-xs text-gray-500 mb-4">
+      <Card>
+        <h2 className="mb-1 text-base font-semibold text-slate-900 dark:text-slate-100">Projects</h2>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
           A simple shared space to jot down project ideas and leave comments — not linked to transactions or
           dashboards.
         </p>
-        <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
+        <form onSubmit={handleAdd} className="flex flex-col gap-2 sm:flex-row">
+          <TextField
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="New project name…"
-            className="input text-sm flex-1"
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={submitting || !name.trim()}
-            className="text-sm font-medium px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 whitespace-nowrap"
-          >
-            {submitting ? 'Adding…' : '+ Add project'}
-          </button>
+          <Button type="submit" icon="add" loading={submitting} disabled={!name.trim()} className="sm:self-start">
+            Add project
+          </Button>
         </form>
-        {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
-      </div>
+        {error && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+            <Icon name="error" className="text-[15px]" />
+            {error}
+          </p>
+        )}
+      </Card>
 
       {projects.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-8">No projects yet — add one above.</p>
+        <EmptyState icon="folder_open" title="No projects yet" subtitle="Add one above to get started." />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
             <ProjectCard
               key={p.id}

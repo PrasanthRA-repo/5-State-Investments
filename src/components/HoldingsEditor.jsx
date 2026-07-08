@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { useData } from '../context/DataContext'
+import { useSnackbar } from '../context/SnackbarContext'
 import { STATUSES, INVESTMENT_CATEGORIES } from '../constants'
 import { formatCurrency } from '../utils/calculations'
+import Card from './ui/Card'
+import Button from './ui/Button'
+import TextField from './ui/TextField'
+import Select from './ui/Select'
+import IconButton from './ui/IconButton'
+import EmptyState from './ui/EmptyState'
+import { ConfirmDialog } from './ui/Dialog'
 
 const CATEGORY_OPTIONS = INVESTMENT_CATEGORIES
 
@@ -28,15 +36,16 @@ const emptyHolding = {
 // cover NSE/India, so that experiment was removed).
 export default function HoldingsEditor() {
   const { holdings, addHolding, updateHolding, deleteHolding } = useData()
+  const { showSnackbar } = useSnackbar()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyHolding)
   const [editingId, setEditingId] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const isStock = form.category === 'Stock Market'
   const computedInvested =
-    isStock && form.quantity && form.average_price
-      ? Number(form.quantity) * Number(form.average_price)
-      : null
+    isStock && form.quantity && form.average_price ? Number(form.quantity) * Number(form.average_price) : null
 
   function startEdit(h) {
     setEditingId(h.id)
@@ -66,134 +75,145 @@ export default function HoldingsEditor() {
     try {
       if (editingId) {
         await updateHolding(editingId, payload)
+        showSnackbar('Holding updated.', { type: 'success' })
       } else {
         await addHolding(payload)
+        showSnackbar('Holding added.', { type: 'success' })
       }
       resetForm()
     } catch (e) {
-      alert(`Failed to save holding: ${e.message}`)
+      showSnackbar(`Failed to save holding: ${e.message}`, { type: 'error' })
     }
   }
 
-  function handleDelete(id) {
-    if (confirm('Remove this holding? Its category total will fall back to the raw transaction amount.')) {
-      deleteHolding(id).catch((e) => alert(`Failed to delete: ${e.message}`))
+  async function confirmDelete() {
+    if (!pendingDelete) return
+    setDeleting(true)
+    try {
+      await deleteHolding(pendingDelete.id)
+      showSnackbar('Holding removed.', { type: 'success' })
+      setPendingDelete(null)
+    } catch (e) {
+      showSnackbar(`Failed to delete: ${e.message}`, { type: 'error' })
+    } finally {
+      setDeleting(false)
     }
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-900">Holdings (manual value updates)</h2>
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="text-xs font-medium text-brand-600 hover:underline"
-        >
-          {open ? 'Close' : editingId ? 'Editing…' : '+ Add holding'}
-        </button>
+    <Card>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Holdings (manual value updates)</h2>
+        <Button variant="text" size="sm" icon={open ? undefined : 'add'} onClick={() => setOpen((o) => !o)}>
+          {open ? 'Close' : editingId ? 'Editing…' : 'Add holding'}
+        </Button>
       </div>
 
       {open && (
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4 items-end">
-          <select
+        <form onSubmit={handleSubmit} className="mb-4 grid grid-cols-2 items-end gap-2 sm:grid-cols-6">
+          <Select
             value={form.category}
             onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            className="input text-xs col-span-1"
+            className="col-span-1 text-xs"
           >
             {CATEGORY_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
-          </select>
-          <input
-            type="text"
+          </Select>
+          <TextField
             placeholder={isStock ? 'Company name (e.g. Reliance Industries)' : 'Description (e.g. Flat 3B)'}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            className="input text-xs col-span-2 sm:col-span-2"
+            className="col-span-2 text-xs sm:col-span-2"
           />
 
           {isStock && (
-            <input
-              type="text"
+            <TextField
               placeholder="Ticker (e.g. RELIANCE)"
               value={form.ticker}
               onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.toUpperCase() }))}
-              className="input text-xs"
+              className="text-xs"
             />
           )}
 
           {isStock ? (
             <>
-              <input
+              <TextField
                 type="number"
                 placeholder="Quantity"
                 value={form.quantity}
                 onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-                className="input text-xs"
+                className="text-xs"
               />
-              <input
+              <TextField
                 type="number"
                 placeholder="Average price"
                 value={form.average_price}
                 onChange={(e) => setForm((f) => ({ ...f, average_price: e.target.value }))}
-                className="input text-xs"
+                className="text-xs"
               />
             </>
           ) : (
-            <input
+            <TextField
               type="number"
               placeholder="Invested"
               value={form.amount_invested}
               onChange={(e) => setForm((f) => ({ ...f, amount_invested: e.target.value }))}
-              className="input text-xs"
+              className="text-xs"
             />
           )}
 
-          <input
+          <TextField
             type="number"
             placeholder="Current value"
             value={form.current_value}
             onChange={(e) => setForm((f) => ({ ...f, current_value: e.target.value }))}
-            className="input text-xs"
+            className="text-xs"
           />
-          <select
+          <Select
             value={form.status}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-            className="input text-xs"
+            className="text-xs"
           >
             {STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
-          </select>
+          </Select>
 
           {isStock && computedInvested !== null && (
-            <p className="col-span-2 sm:col-span-6 text-xs text-gray-500">
+            <p className="col-span-2 text-xs text-slate-500 dark:text-slate-400 sm:col-span-6">
               Invested (auto = qty × avg price): {formatCurrency(computedInvested)}
             </p>
           )}
 
-          <div className="col-span-2 sm:col-span-6 flex gap-2">
-            <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium px-3 py-2 rounded-lg">
+          <div className="col-span-2 flex gap-2 sm:col-span-6">
+            <Button type="submit" size="sm">
               {editingId ? 'Save' : 'Add'}
-            </button>
+            </Button>
             {editingId && (
-              <button type="button" onClick={resetForm} className="text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 text-gray-600">
+              <Button type="button" variant="outlined" size="sm" onClick={resetForm}>
                 Cancel
-              </button>
+              </Button>
             )}
           </div>
         </form>
       )}
 
       {holdings.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-4">
-          No manual holdings yet — category totals use raw transaction amounts.
-        </p>
+        <EmptyState
+          icon="account_balance"
+          title="No manual holdings yet"
+          subtitle="Category totals use raw transaction amounts."
+        />
       ) : (
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <table className="w-full text-sm min-w-[640px]">
+        <div className="-mx-4 overflow-x-auto sm:mx-0">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 <th className="py-2 px-2">Category</th>
                 <th className="py-2 px-2">Description</th>
                 <th className="py-2 px-2 text-right">Invested</th>
@@ -204,22 +224,29 @@ export default function HoldingsEditor() {
             </thead>
             <tbody>
               {holdings.map((h) => (
-                <tr key={h.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-2 px-2 whitespace-nowrap">{h.category}</td>
-                  <td className="py-2 px-2 whitespace-nowrap">
+                <tr
+                  key={h.id}
+                  className="border-b border-slate-100 transition-colors duration-150 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-700/40"
+                >
+                  <td className="py-2 px-2 whitespace-nowrap text-slate-700 dark:text-slate-300">{h.category}</td>
+                  <td className="py-2 px-2 whitespace-nowrap text-slate-700 dark:text-slate-300">
                     {h.description}
                     {h.category === 'Stock Market' && h.ticker && (
-                      <span className="block text-[11px] text-gray-400">
+                      <span className="block text-[11px] text-slate-400 dark:text-slate-500">
                         {h.ticker} · {h.quantity || 0} @ {formatCurrency(h.average_price)}
                       </span>
                     )}
                   </td>
-                  <td className="py-2 px-2 text-right whitespace-nowrap">{formatCurrency(h.amount_invested)}</td>
-                  <td className="py-2 px-2 text-right whitespace-nowrap">{formatCurrency(h.current_value)}</td>
-                  <td className="py-2 px-2 whitespace-nowrap">{h.status}</td>
+                  <td className="py-2 px-2 text-right whitespace-nowrap text-slate-700 dark:text-slate-300">
+                    {formatCurrency(h.amount_invested)}
+                  </td>
+                  <td className="py-2 px-2 text-right whitespace-nowrap font-medium text-slate-900 dark:text-slate-100">
+                    {formatCurrency(h.current_value)}
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap text-slate-700 dark:text-slate-300">{h.status}</td>
                   <td className="py-2 px-2 whitespace-nowrap text-right">
-                    <button onClick={() => startEdit(h)} className="text-brand-600 hover:underline mr-3">Edit</button>
-                    <button onClick={() => handleDelete(h.id)} className="text-red-600 hover:underline">Delete</button>
+                    <IconButton icon="edit" label="Edit holding" onClick={() => startEdit(h)} className="mr-1" />
+                    <IconButton icon="delete" label="Delete holding" variant="danger" onClick={() => setPendingDelete(h)} />
                   </td>
                 </tr>
               ))}
@@ -227,6 +254,16 @@ export default function HoldingsEditor() {
           </table>
         </div>
       )}
-    </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Remove holding?"
+        message="Remove this holding? Its category total will fall back to the raw transaction amount."
+        confirmLabel="Remove"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
+    </Card>
   )
 }

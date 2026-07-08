@@ -11,12 +11,19 @@ export default function IdleCashCards() {
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-gray-900 mb-3">Who's holding idle cash</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Who's holding idle cash</h2>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {rows.map(({ member, amount }) => (
-          <div key={member.id} className="bg-white rounded-2xl border border-gray-200 p-4">
-            <p className="text-xs font-medium text-gray-500 mb-1">{member.name}</p>
-            <p className={`text-lg font-semibold ${amount < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+          <div
+            key={member.id}
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-e1 transition-all duration-250 hover:shadow-e2 dark:border-slate-700 dark:bg-slate-800"
+          >
+            <p className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">{member.name}</p>
+            <p
+              className={`text-lg font-semibold ${
+                amount < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-slate-100'
+              }`}
+            >
               {formatCurrency(amount)}
             </p>
           </div>
