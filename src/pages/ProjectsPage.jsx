@@ -7,7 +7,15 @@ import ProjectCard from '../components/ProjectCard'
 // Deliberately standalone -- no link to transactions, holdings, or the other
 // dashboards. Just: add a project, leave comments, see everything as cards.
 export default function ProjectsPage() {
-  const { members, projects, projectComments, addProject, deleteProject, addProjectComment } = useData()
+  const {
+    members,
+    projects,
+    projectComments,
+    addProject,
+    deleteProject,
+    addProjectComment,
+    deleteProjectComment,
+  } = useData()
   const { currentMemberId } = useAuth()
   const [name, setName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -84,6 +92,7 @@ export default function ProjectsPage() {
               comments={commentsByProject(p.id)}
               members={members}
               onAddComment={handleAddComment}
+              onDeleteComment={deleteProjectComment}
               onDelete={deleteProject}
             />
           ))}

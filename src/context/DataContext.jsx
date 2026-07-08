@@ -200,6 +200,11 @@ export function DataProvider({ children }) {
     return row
   }, [])
 
+  const deleteProjectComment = useCallback(async (id) => {
+    await storage.deleteProjectComment(id)
+    setProjectComments((prev) => removeById(prev, id))
+  }, [])
+
   const value = {
     members,
     transactions,
@@ -218,6 +223,7 @@ export function DataProvider({ children }) {
     addProject,
     deleteProject,
     addProjectComment,
+    deleteProjectComment,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

@@ -2,12 +2,17 @@ import { useState } from 'react'
 
 // One project = a name + a running comment thread, rendered as a card.
 // Standalone -- doesn't touch transactions/holdings/dashboards at all.
-export default function ProjectCard({ project, comments, members, onAddComment, onDelete }) {
+export default function ProjectCard({ project, comments, members, onAddComment, onDeleteComment, onDelete }) {
   const [text, setText] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [submitting, setSubmitting] = useState(false)
 
   const memberName = (id) => members.find((m) => m.id === id)?.name || 'Someone'
+
+  function commentDateLabel(createdAt) {
+    if (!createdAt) return ''
+    return new Date(createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+  }
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -21,6 +26,10 @@ export default function ProjectCard({ project, comments, members, onAddComment, 
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleDeleteComment(commentId) {
+    onDeleteComment(commentId).catch((err) => alert(`Failed to delete comment: ${err.message}`))
   }
 
   function handleDelete() {
@@ -50,9 +59,17 @@ export default function ProjectCard({ project, comments, members, onAddComment, 
             {comments.map((c) => (
               <li
                 key={c.id}
-                className="text-xs text-gray-700 leading-snug border-b border-gray-50 pb-1.5 last:border-0 last:pb-0"
+                className="flex items-center justify-between gap-2 text-xs text-gray-700 border-b border-gray-50 pb-1.5 last:border-0 last:pb-0"
               >
-                <span className="font-medium text-gray-500">{memberName(c.member_id)}:</span> {c.comment}
+                <span className="flex-1 break-words">{c.comment}</span>
+                <span className="text-gray-400 whitespace-nowrap">{commentDateLabel(c.created_at)}</span>
+                <button
+                  onClick={() => handleDeleteComment(c.id)}
+                  className="text-gray-300 hover:text-red-500 leading-none text-sm px-0.5"
+                  title="Delete comment"
+                >
+                  ×
+                </button>
               </li>
             ))}
           </ul>

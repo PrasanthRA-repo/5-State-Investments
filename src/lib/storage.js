@@ -118,3 +118,9 @@ export async function addProjectComment(comment) {
   must(error, 'addProjectComment')
   return data
 }
+
+export async function deleteProjectComment(id) {
+  const { error } = await supabase.from('project_comments').delete().eq('id', id)
+  must(error, 'deleteProjectComment')
+  return id
+}
