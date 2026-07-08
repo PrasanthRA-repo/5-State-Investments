@@ -28,8 +28,17 @@ export default function ProjectsPage() {
     }
   }
 
-  async function handleAddComment(projectId, text) {
-    await addProjectComment({ project_id: projectId, member_id: currentMemberId || null, comment: text })
+  // `date` is a plain "YYYY-MM-DD" string from the date input -- pass it as
+  // noon UTC (not midnight) so timezone conversion never shifts it to the
+  // previous/next day when displayed back.
+  async function handleAddComment(projectId, text, date) {
+    const created_at = date ? new Date(`${date}T12:00:00`).toISOString() : new Date().toISOString()
+    await addProjectComment({
+      project_id: projectId,
+      member_id: currentMemberId || null,
+      comment: text,
+      created_at,
+    })
   }
 
   const commentsByProject = (projectId) =>

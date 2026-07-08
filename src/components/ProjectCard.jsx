@@ -4,6 +4,7 @@ import { useState } from 'react'
 // Standalone -- doesn't touch transactions/holdings/dashboards at all.
 export default function ProjectCard({ project, comments, members, onAddComment, onDelete }) {
   const [text, setText] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [submitting, setSubmitting] = useState(false)
 
   const memberName = (id) => members.find((m) => m.id === id)?.name || 'Someone'
@@ -13,7 +14,7 @@ export default function ProjectCard({ project, comments, members, onAddComment, 
     if (!text.trim()) return
     setSubmitting(true)
     try {
-      await onAddComment(project.id, text.trim())
+      await onAddComment(project.id, text.trim(), date)
       setText('')
     } catch (err) {
       alert(`Failed to add comment: ${err.message}`)
@@ -41,38 +42,45 @@ export default function ProjectCard({ project, comments, members, onAddComment, 
         {project.created_by ? ` · ${memberName(project.created_by)}` : ''}
       </p>
 
-      <div className="flex-1 space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
+      <div className="flex-1 mb-3 max-h-48 overflow-y-auto pr-1">
         {comments.length === 0 ? (
           <p className="text-xs text-gray-400">No comments yet.</p>
         ) : (
-          comments.map((c) => (
-            <div key={c.id} className="bg-gray-50 rounded-lg px-2 py-1.5">
-              <p className="text-xs text-gray-800 break-words">{c.comment}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                {memberName(c.member_id)} ·{' '}
-                {c.created_at
-                  ? new Date(c.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-                  : ''}
-              </p>
-            </div>
-          ))
+          <ul className="space-y-1.5">
+            {comments.map((c) => (
+              <li
+                key={c.id}
+                className="text-xs text-gray-700 leading-snug border-b border-gray-50 pb-1.5 last:border-0 last:pb-0"
+              >
+                <span className="font-medium text-gray-500">{memberName(c.member_id)}:</span> {c.comment}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-2 mt-auto">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Add a comment…"
-          className="input text-xs"
-        />
+      <form onSubmit={handleAdd} className="space-y-2 mt-auto">
+        <div className="flex gap-2">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="input text-xs w-36 shrink-0"
+          />
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Add a comment…"
+            className="input text-xs flex-1"
+          />
+        </div>
         <button
           type="submit"
           disabled={submitting || !text.trim()}
-          className="text-xs font-medium px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 whitespace-nowrap"
+          className="w-full text-xs font-medium px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50"
         >
-          {submitting ? '…' : 'Add'}
+          {submitting ? 'Adding…' : 'Add comment'}
         </button>
       </form>
     </div>
