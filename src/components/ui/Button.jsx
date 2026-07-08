@@ -10,6 +10,8 @@ const VARIANTS = {
   text: 'bg-transparent text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-slate-800',
   danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-e1 hover:shadow-e2',
   'danger-text': 'bg-transparent text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40',
+  // Gold gradient -- used on the branded login screen to match the "5 State" logo palette.
+  gold: 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-600 text-black hover:brightness-110 active:brightness-95 shadow-e2 hover:shadow-e3',
 }
 
 const SIZES = {
@@ -18,7 +20,7 @@ const SIZES = {
   lg: 'text-base px-5 py-3 gap-2',
 }
 
-// MD3-style button. variant: filled | tonal | outlined | text | danger | danger-text
+// MD3-style button. variant: filled | tonal | outlined | text | danger | danger-text | gold
 export default function Button({
   children,
   variant = 'filled',
@@ -41,7 +43,12 @@ export default function Button({
       {...rest}
     >
       {loading ? (
-        <Spinner size={16} className={variant === 'filled' || variant === 'danger' ? 'text-white' : ''} />
+        <Spinner
+          size={16}
+          className={
+            variant === 'gold' ? 'text-black' : variant === 'filled' || variant === 'danger' ? 'text-white' : ''
+          }
+        />
       ) : (
         icon && <Icon name={icon} className="text-[18px]" />
       )}
