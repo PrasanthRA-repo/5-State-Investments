@@ -8,6 +8,7 @@ import {
   EVERYONE_VALUE,
   OUTFLOW_TYPES,
   OUTFLOW_TO_INVESTMENT_TYPES,
+  INFLOW_COLLECTIBLE_TYPES,
 } from '../constants'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -23,6 +24,7 @@ const emptyForm = {
   status: 'Active',
   notes: '',
   linked_asset: '',
+  collected_by: '',
 }
 
 // Types where money is leaving a member's hand (investing/withdrawing/
@@ -62,6 +64,8 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
   const isTransfer = form.type === TRANSFER_TYPE
   const isEveryone = form.member_id === EVERYONE_VALUE
   const isOutflow = OUTFLOW_ALL_TYPES.includes(form.type)
+  const isCollectible = INFLOW_COLLECTIBLE_TYPES.includes(form.type)
+  const showCollectedBy = isEveryone && isCollectible
 
   function handleTypeChange(type) {
     setForm((f) => ({
@@ -70,6 +74,18 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
       category: TYPE_TO_DEFAULT_CATEGORY[type] || f.category,
       // Transfer needs a real single "from" member -- clear Everyone if it was selected
       member_id: type === TRANSFER_TYPE && f.member_id === EVERYONE_VALUE ? '' : f.member_id,
+      // "Collected by" only makes sense for Dividend/Return and Loan Repayment
+      // Received -- clear it if the type changes to something else.
+      collected_by: INFLOW_COLLECTIBLE_TYPES.includes(type) ? f.collected_by : '',
+    }))
+  }
+
+  function handleMemberChange(memberId) {
+    setForm((f) => ({
+      ...f,
+      member_id: memberId,
+      // Only relevant while "Everyone" is selected.
+      collected_by: memberId === EVERYONE_VALUE ? f.collected_by : '',
     }))
   }
 
@@ -95,13 +111,19 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
 
     setSubmitting(true)
     try {
+      // `collected_by` is a form-only field used to decide whether to
+      // auto-generate consolidating transfers below -- it isn't a column in
+      // the `transactions` table, so it must never be spread into anything
+      // sent to addTransaction/updateTransaction.
+      const { collected_by, ...formForTx } = form
+
       if (isEveryone && !editingTx) {
         const shares = everyoneShares(Number(form.amount))
         const batchId = uid()
         await Promise.all(
           members.map((m, i) =>
             addTransaction({
-              ...form,
+              ...formForTx,
               member_id: m.id,
               to_member_id: '',
               amount: shares[i],
@@ -112,12 +134,41 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
             })
           )
         )
+
+        // If this is a Dividend/Return or Loan Repayment Received and the
+        // user told us who actually collected the cash, auto-generate
+        // Transfer transactions moving everyone else's equal share to that
+        // person. Without this, every member's idle cash goes up even
+        // though only one of them actually has the money -- which is
+        // exactly the manual cleanup this option is meant to replace.
+        if (isCollectible && collected_by) {
+          const shareByMemberId = Object.fromEntries(members.map((m, i) => [m.id, shares[i]]))
+          const others = members.filter((m) => m.id !== collected_by)
+          if (others.length > 0) {
+            await Promise.all(
+              others.map((m) =>
+                addTransaction({
+                  date: form.date,
+                  member_id: m.id,
+                  to_member_id: collected_by,
+                  type: TRANSFER_TYPE,
+                  category: form.category,
+                  amount: shareByMemberId[m.id],
+                  status: 'Active',
+                  notes: `Auto-transfer: consolidating ${form.type} to whoever actually collected it`,
+                  linked_asset: form.linked_asset,
+                })
+              )
+            )
+          }
+        }
+
         setForm({ ...emptyForm, member_id: currentMemberId || '' })
         return
       }
 
       const payload = {
-        ...form,
+        ...formForTx,
         amount: Number(form.amount),
         to_member_id: isTransfer ? form.to_member_id : '',
       }
@@ -142,6 +193,7 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
   }
 
   const previewShares = isEveryone && !editingTx && form.amount ? everyoneShares(Number(form.amount)) : null
+  const collectorName = form.collected_by ? members.find((m) => m.id === form.collected_by)?.name : null
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
@@ -163,6 +215,13 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
           <p className="text-xs mt-1">
             {members.map((m, i) => `${m.name}: ₹${previewShares[i].toLocaleString('en-IN')}`).join('  ·  ')}
           </p>
+          {collectorName && (
+            <p className="text-xs mt-2 text-brand-800">
+              Then auto-transferring everyone else's share to <strong>{collectorName}</strong>, since they're the one
+              who actually collected the cash -- everyone still gets credit for their equal share, but only{' '}
+              {collectorName}'s idle cash actually goes up.
+            </p>
+          )}
         </div>
       )}
 
@@ -193,7 +252,7 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
         <Field label={isTransfer ? 'From member' : 'Member'}>
           <select
             value={form.member_id}
-            onChange={(e) => setForm((f) => ({ ...f, member_id: e.target.value }))}
+            onChange={(e) => handleMemberChange(e.target.value)}
             className="input"
           >
             <option value="">Select member</option>
@@ -223,6 +282,23 @@ export default function TransactionForm({ editingTx, onDoneEditing }) {
                     {m.name}
                   </option>
                 ))}
+            </select>
+          </Field>
+        )}
+
+        {showCollectedBy && (
+          <Field label="Collected by (optional)">
+            <select
+              value={form.collected_by}
+              onChange={(e) => setForm((f) => ({ ...f, collected_by: e.target.value }))}
+              className="input"
+            >
+              <option value="">— leave split across everyone —</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
             </select>
           </Field>
         )}

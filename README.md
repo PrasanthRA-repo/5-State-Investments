@@ -80,7 +80,7 @@ A few things worth knowing:
 
 ## What's built
 
-- **Transaction Dashboard** (`/transactions`) — add/edit/delete, filter, sort, running balance. Supports an "Everyone (split equally)" option that fans out into one real transaction per member — equal shares for money coming in (contributions, dividends), proportional to each member's current idle cash for money going out (investments, withdrawals) so it drains actual holdings correctly instead of going negative. Also supports member-to-member cash "Transfer". Shows as stacked cards on mobile, a full table on larger screens.
+- **Transaction Dashboard** (`/transactions`) — add/edit/delete, filter, sort, running balance. Supports an "Everyone (split equally)" option that fans out into one real transaction per member — equal shares for money coming in (contributions, dividends), proportional to each member's current idle cash for money going out (investments, withdrawals) so it drains actual holdings correctly instead of going negative. For Dividend/Return and Loan Repayment Received specifically, an optional "Collected by" field lets you pick who actually received the cash — the app still credits everyone's equal share for ownership/history, then auto-generates the Transfer transactions needed to move the other members' shares to whoever actually has the money, so idle cash matches reality without manual cleanup. Also supports member-to-member cash "Transfer". Shows as stacked cards on mobile, a full table on larger screens.
 - **Overall Dashboard** (`/`) — pooled fund, portfolio value, cash available, invested-vs-current, a category breakdown pie chart, recent transactions, and 5 per-category performance cards (Lending / Stock Market / Real Estate / Liquid Fund / Others) with invested, current value, absolute returns, XIRR, CAGR, and position count.
 - **Individual Dashboard** (`/me`) — pick any member, see their contribution, ownership %, share of holdings, personal transaction history, and a "who's holding idle cash" card per member.
 - **Login** — real Supabase email/password (see step 3 above). No public sign-up screen on purpose; accounts are created by whoever set up the project.
@@ -90,11 +90,4 @@ A few things worth knowing:
 ## Data model
 
 - **members**: id, name, email (matched to the Supabase Auth account), date_joined.
-- **transactions**: date, member_id, to_member_id (Transfers only), type, category, amount, status, notes, linked_asset, batch_id/batch_total/batch_count/batch_split (set when created via "Everyone").
-- **holdings**: category, description, amount_invested, current_value, date_acquired, status, ticker/quantity/average_price/live_price/price_updated_at (Stock Market only).
-
-Full definitions + RLS policies are in `schema.sql`.
-
-## Tech stack
-
-React + Vite + Tailwind CSS + Recharts + React Router + Supabase (Postgres, Auth, Realtime).
+- **transactions**: date, member_id, to_member_id (Transfers only), type, category, amount, status, notes, linked_asset, batch_id/batch_total/batch_co

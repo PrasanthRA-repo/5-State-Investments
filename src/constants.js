@@ -76,6 +76,17 @@ export const OUTFLOW_TYPES = ['Withdrawal', 'Expense']
 export const CATEGORY_OUTFLOW_TYPES = ['Lending', 'Stock Investment', 'Real Estate Investment']
 export const CATEGORY_INFLOW_TYPES = ['Loan Repayment Received', 'Dividend/Return']
 
+// Inflow types where the money is received from an external source (a
+// borrower repaying a loan, a company paying a dividend) and necessarily
+// lands in ONE member's real bank/broker account, even though it's split
+// equally among all 5 for ownership/history purposes. When "Everyone" is
+// used for one of these types, the form offers an optional "Collected by"
+// choice -- picking a member auto-generates Transfer transactions moving
+// every other member's equal share to that person, so idle cash correctly
+// reflects who's physically holding the cash instead of requiring manual
+// follow-up transfers.
+export const INFLOW_COLLECTIBLE_TYPES = ['Dividend/Return', 'Loan Repayment Received']
+
 export const DEFAULT_MEMBERS = [
   { id: 'm1', name: 'Prasanth', email: '', date_joined: '' },
   { id: 'm2', name: 'Balaji', email: '', date_joined: '' },
