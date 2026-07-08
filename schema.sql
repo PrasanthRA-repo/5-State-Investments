@@ -2,8 +2,8 @@
 -- Run this once in your Supabase project's SQL Editor (Project > SQL Editor > New query).
 -- Safe to re-run: uses "if not exists" / "or replace" where possible.
 -- If you're re-running this after already setting up members/transactions/holdings,
--- only the new `projects` and `project_comments` tables (and their policies/realtime)
--- will actually be created -- everything else is a harmless no-op.
+-- only whatever's missing (new tables/columns) actually gets created -- everything
+-- else is a harmless no-op, and no existing data is touched.
 
 -- ---------------------------------------------------------------------------
 -- Members
@@ -86,6 +86,10 @@ create table if not exists projects (
   created_by text references members(id),
   created_at timestamptz default now()
 );
+
+-- Added after the initial projects table -- "add column if not exists" makes
+-- this safe to re-run even if you already created the projects table before.
+alter table projects add column if not exists status text default 'Active';
 
 create table if not exists project_comments (
   id uuid primary key default gen_random_uuid(),

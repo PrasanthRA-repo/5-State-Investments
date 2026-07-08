@@ -92,8 +92,15 @@ export async function getProjects() {
 }
 
 export async function addProject(project) {
-  const { data, error } = await supabase.from('projects').insert(project).select().single()
+  const payload = { status: 'Active', ...project }
+  const { data, error } = await supabase.from('projects').insert(payload).select().single()
   must(error, 'addProject')
+  return data
+}
+
+export async function updateProject(id, patch) {
+  const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select().single()
+  must(error, 'updateProject')
   return data
 }
 
@@ -116,6 +123,12 @@ export async function getProjectComments() {
 export async function addProjectComment(comment) {
   const { data, error } = await supabase.from('project_comments').insert(comment).select().single()
   must(error, 'addProjectComment')
+  return data
+}
+
+export async function updateProjectComment(id, patch) {
+  const { data, error } = await supabase.from('project_comments').update(patch).eq('id', id).select().single()
+  must(error, 'updateProjectComment')
   return data
 }
 

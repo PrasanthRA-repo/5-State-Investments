@@ -84,7 +84,7 @@ A few things worth knowing:
 - **Dashboard** (`/`) — pooled fund, portfolio value, cash available, invested-vs-current, a category breakdown pie chart, recent transactions, and 5 per-category performance cards (Lending / Stock Market / Real Estate / Liquid Fund / Others) with invested, current value, absolute returns, XIRR, CAGR, and position count. Also where Stock Market holdings' ticker/quantity/average price and other categories' current values are manually updated.
 - **Individual Dashboard** (`/me`) — pick any member, see their contribution, ownership %, share of holdings, personal transaction history, and a "who's holding idle cash" card per member.
 - **Transaction Dashboard** (`/transactions`) — add/edit/delete, filter, sort, running balance. Supports an "Everyone (split equally)" option that fans out into one real transaction per member — equal shares for money coming in (contributions, dividends), proportional to each member's current idle cash for money going out (investments, withdrawals) so it drains actual holdings correctly instead of going negative. For Dividend/Return and Loan Repayment Received specifically, an optional "Collected by" field lets you pick who actually received the cash — the app still credits everyone's equal share for ownership/history, then auto-generates the Transfer transactions needed to move the other members' shares to whoever actually has the money, so idle cash matches reality without manual cleanup. Also supports member-to-member cash "Transfer". Shows as stacked cards on mobile, a full table on larger screens.
-- **Projects** (`/projects`) — a simple standalone board for jotting down project ideas, shown as cards (project name + a running comment thread per card, with who commented and when). Not linked to transactions, holdings, or any of the financial numbers elsewhere in the app — just a shared scratchpad.
+- **Projects** (`/projects`) — a simple standalone board for jotting down project ideas, shown as cards. Each card has a Active/Hold/Closed status, a running comment thread (each comment can carry its own date, and can be edited or deleted), and a comment box with a date picker. Not linked to transactions, holdings, or any of the financial numbers elsewhere in the app — just a shared scratchpad.
 - **Login** — real Supabase email/password (see step 3 above). No public sign-up screen on purpose; accounts are created by whoever set up the project.
 - **Responsive design** — stacked-card layouts on mobile for tables, safe-area padding for notched phones, and an "Add to Home Screen" friendly setup.
 
@@ -101,5 +101,3 @@ Note: an earlier experimental "live stock price sync" via Twelve Data was remove
 Full definitions + RLS policies are in `schema.sql`.
 
 ## Tech stack
-
-React + Vite + Tailwind CSS + Recharts + React Router + Supabase (Postgres, Auth, Realtime).

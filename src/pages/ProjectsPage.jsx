@@ -12,8 +12,10 @@ export default function ProjectsPage() {
     projects,
     projectComments,
     addProject,
+    updateProject,
     deleteProject,
     addProjectComment,
+    updateProjectComment,
     deleteProjectComment,
   } = useData()
   const { currentMemberId } = useAuth()
@@ -27,7 +29,7 @@ export default function ProjectsPage() {
     setError('')
     setSubmitting(true)
     try {
-      await addProject({ name: name.trim(), created_by: currentMemberId || null })
+      await addProject({ name: name.trim(), created_by: currentMemberId || null, status: 'Active' })
       setName('')
     } catch (err) {
       setError(err.message || 'Failed to add project.')
@@ -92,7 +94,9 @@ export default function ProjectsPage() {
               comments={commentsByProject(p.id)}
               members={members}
               onAddComment={handleAddComment}
+              onEditComment={updateProjectComment}
               onDeleteComment={deleteProjectComment}
+              onUpdateStatus={updateProject}
               onDelete={deleteProject}
             />
           ))}

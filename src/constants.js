@@ -87,6 +87,15 @@ export const CATEGORY_INFLOW_TYPES = ['Loan Repayment Received', 'Dividend/Retur
 // follow-up transfers.
 export const INFLOW_COLLECTIBLE_TYPES = ['Dividend/Return', 'Loan Repayment Received']
 
+// Status options for a Project card (independent of the financial STATUSES above).
+export const PROJECT_STATUSES = ['Active', 'Hold', 'Closed']
+
+export const PROJECT_STATUS_COLORS = {
+  Active: '#22c55e',
+  Hold: '#f59e0b',
+  Closed: '#6b7280',
+}
+
 export const DEFAULT_MEMBERS = [
   { id: 'm1', name: 'Prasanth', email: '', date_joined: '' },
   { id: 'm2', name: 'Balaji', email: '', date_joined: '' },

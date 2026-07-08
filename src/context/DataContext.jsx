@@ -188,6 +188,12 @@ export function DataProvider({ children }) {
     return row
   }, [])
 
+  const updateProject = useCallback(async (id, patch) => {
+    const row = await storage.updateProject(id, patch)
+    setProjects((prev) => upsertById(prev, row))
+    return row
+  }, [])
+
   const deleteProject = useCallback(async (id) => {
     await storage.deleteProject(id)
     setProjects((prev) => removeById(prev, id))
@@ -196,6 +202,12 @@ export function DataProvider({ children }) {
 
   const addProjectComment = useCallback(async (comment) => {
     const row = await storage.addProjectComment(comment)
+    setProjectComments((prev) => upsertById(prev, row))
+    return row
+  }, [])
+
+  const updateProjectComment = useCallback(async (id, patch) => {
+    const row = await storage.updateProjectComment(id, patch)
     setProjectComments((prev) => upsertById(prev, row))
     return row
   }, [])
@@ -221,8 +233,10 @@ export function DataProvider({ children }) {
     updateHolding,
     deleteHolding,
     addProject,
+    updateProject,
     deleteProject,
     addProjectComment,
+    updateProjectComment,
     deleteProjectComment,
   }
 
