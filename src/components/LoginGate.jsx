@@ -15,7 +15,7 @@ function BrandedBackground({ children }) {
   const { isDark, toggleTheme } = useTheme()
   return (
     <div
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:justify-end sm:px-10 md:px-16 lg:px-24"
       style={{
         backgroundImage: "url('/login-background.jpg')",
         backgroundSize: 'cover',
