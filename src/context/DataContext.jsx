@@ -20,6 +20,8 @@ export function DataProvider({ children }) {
   const [members, setMembers] = useState([])
   const [transactions, setTransactions] = useState([])
   const [holdings, setHoldings] = useState([])
+  const [projects, setProjects] = useState([])
+  const [projectComments, setProjectComments] = useState([])
   // Starts true and only resolves once we know whether there's a session --
   // RLS blocks anonymous reads entirely, so there's nothing to fetch until
   // someone is signed in.
@@ -29,14 +31,18 @@ export function DataProvider({ children }) {
 
   const refresh = useCallback(async () => {
     try {
-      const [m, t, h] = await Promise.all([
+      const [m, t, h, p, pc] = await Promise.all([
         storage.getMembers(),
         storage.getTransactions(),
         storage.getHoldings(),
+        storage.getProjects(),
+        storage.getProjectComments(),
       ])
       setMembers(m)
       setTransactions(t)
       setHoldings(h)
+      setProjects(p)
+      setProjectComments(pc)
       setLoadError(null)
     } catch (e) {
       setLoadError(e.message || 'Failed to load data from Supabase')
@@ -75,7 +81,29 @@ export function DataProvider({ children }) {
       })
       .subscribe()
 
-    channelsRef.current = [txChannel, holdingsChannel, membersChannel]
+    const projectsChannel = supabase
+      .channel('public:projects')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          setProjects((prev) => upsertById(prev, payload.new))
+        } else if (payload.eventType === 'DELETE') {
+          setProjects((prev) => removeById(prev, payload.old.id))
+        }
+      })
+      .subscribe()
+
+    const projectCommentsChannel = supabase
+      .channel('public:project_comments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_comments' }, (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          setProjectComments((prev) => upsertById(prev, payload.new))
+        } else if (payload.eventType === 'DELETE') {
+          setProjectComments((prev) => removeById(prev, payload.old.id))
+        }
+      })
+      .subscribe()
+
+    channelsRef.current = [txChannel, holdingsChannel, membersChannel, projectsChannel, projectCommentsChannel]
   }
 
   function unsubscribeRealtime() {
@@ -106,6 +134,8 @@ export function DataProvider({ children }) {
         setMembers([])
         setTransactions([])
         setHoldings([])
+        setProjects([])
+        setProjectComments([])
         setLoading(false)
       }
     })
@@ -152,10 +182,30 @@ export function DataProvider({ children }) {
     setHoldings((prev) => removeById(prev, id))
   }, [])
 
+  const addProject = useCallback(async (project) => {
+    const row = await storage.addProject(project)
+    setProjects((prev) => upsertById(prev, row))
+    return row
+  }, [])
+
+  const deleteProject = useCallback(async (id) => {
+    await storage.deleteProject(id)
+    setProjects((prev) => removeById(prev, id))
+    setProjectComments((prev) => prev.filter((c) => c.project_id !== id))
+  }, [])
+
+  const addProjectComment = useCallback(async (comment) => {
+    const row = await storage.addProjectComment(comment)
+    setProjectComments((prev) => upsertById(prev, row))
+    return row
+  }, [])
+
   const value = {
     members,
     transactions,
     holdings,
+    projects,
+    projectComments,
     loading,
     loadError,
     refresh,
@@ -165,6 +215,9 @@ export function DataProvider({ children }) {
     addHolding,
     updateHolding,
     deleteHolding,
+    addProject,
+    deleteProject,
+    addProjectComment,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

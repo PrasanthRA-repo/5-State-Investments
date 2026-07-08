@@ -1,6 +1,9 @@
 -- 5 State Group -- Supabase schema
 -- Run this once in your Supabase project's SQL Editor (Project > SQL Editor > New query).
 -- Safe to re-run: uses "if not exists" / "or replace" where possible.
+-- If you're re-running this after already setting up members/transactions/holdings,
+-- only the new `projects` and `project_comments` tables (and their policies/realtime)
+-- will actually be created -- everything else is a harmless no-op.
 
 -- ---------------------------------------------------------------------------
 -- Members
@@ -74,6 +77,27 @@ create table if not exists holdings (
 create index if not exists holdings_category_idx on holdings(category);
 
 -- ---------------------------------------------------------------------------
+-- Projects -- a simple standalone board, not linked to transactions/holdings.
+-- Just a name plus a running comment thread per project, shown as cards.
+-- ---------------------------------------------------------------------------
+create table if not exists projects (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  created_by text references members(id),
+  created_at timestamptz default now()
+);
+
+create table if not exists project_comments (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  member_id text references members(id),
+  comment text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists project_comments_project_id_idx on project_comments(project_id);
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security
 -- This is a private app for 5 trusted friends who all see and edit the same
 -- shared data -- so the policy is simply "any signed-in user can do anything",
@@ -82,6 +106,8 @@ create index if not exists holdings_category_idx on holdings(category);
 alter table members enable row level security;
 alter table transactions enable row level security;
 alter table holdings enable row level security;
+alter table projects enable row level security;
+alter table project_comments enable row level security;
 
 drop policy if exists "members_all_authenticated" on members;
 create policy "members_all_authenticated" on members
@@ -95,9 +121,18 @@ drop policy if exists "holdings_all_authenticated" on holdings;
 create policy "holdings_all_authenticated" on holdings
   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
+drop policy if exists "projects_all_authenticated" on projects;
+create policy "projects_all_authenticated" on projects
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+drop policy if exists "project_comments_all_authenticated" on project_comments;
+create policy "project_comments_all_authenticated" on project_comments
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
 -- ---------------------------------------------------------------------------
 -- Realtime -- lets every member's browser see changes the moment anyone
--- else adds/edits/deletes a transaction or holding, without refreshing.
+-- else adds/edits/deletes a transaction, holding, project, or comment,
+-- without refreshing.
 -- ---------------------------------------------------------------------------
 -- Newer Supabase projects sometimes auto-add new tables to this publication
 -- already, which makes a plain "alter publication ... add table" error with
@@ -120,6 +155,20 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table members;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table projects;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table project_comments;
 exception when duplicate_object then
   null;
 end $$;

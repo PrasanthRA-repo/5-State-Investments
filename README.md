@@ -17,7 +17,8 @@ If you genuinely can't find either value, click **Connect** at the top of the pr
 
 1. In the left sidebar, open **SQL Editor → New query**.
 2. Open `schema.sql` (in this folder), copy its entire contents, paste into the SQL editor, and click **Run**.
-3. This creates `members` (pre-seeded with Prasanth/Balaji/Gokul/Ravi/Suresh), `transactions`, and `holdings`, turns on Row Level Security (only signed-in users can read/write — anonymous access is blocked), and enables Realtime so everyone's screen updates live.
+3. This creates `members` (pre-seeded with Prasanth/Balaji/Gokul/Ravi/Suresh), `transactions`, `holdings`, `projects`, and `project_comments`, turns on Row Level Security (only signed-in users can read/write — anonymous access is blocked), and enables Realtime so everyone's screen updates live.
+4. Already set up the first few tables before? `schema.sql` is safe to re-run any time — it only creates whatever's missing (e.g. re-running it after an update just adds the new `projects`/`project_comments` tables without touching your existing data).
 
 ## 3. Create the 5 login accounts
 
@@ -80,14 +81,25 @@ A few things worth knowing:
 
 ## What's built
 
-- **Transaction Dashboard** (`/transactions`) — add/edit/delete, filter, sort, running balance. Supports an "Everyone (split equally)" option that fans out into one real transaction per member — equal shares for money coming in (contributions, dividends), proportional to each member's current idle cash for money going out (investments, withdrawals) so it drains actual holdings correctly instead of going negative. For Dividend/Return and Loan Repayment Received specifically, an optional "Collected by" field lets you pick who actually received the cash — the app still credits everyone's equal share for ownership/history, then auto-generates the Transfer transactions needed to move the other members' shares to whoever actually has the money, so idle cash matches reality without manual cleanup. Also supports member-to-member cash "Transfer". Shows as stacked cards on mobile, a full table on larger screens.
-- **Overall Dashboard** (`/`) — pooled fund, portfolio value, cash available, invested-vs-current, a category breakdown pie chart, recent transactions, and 5 per-category performance cards (Lending / Stock Market / Real Estate / Liquid Fund / Others) with invested, current value, absolute returns, XIRR, CAGR, and position count.
+- **Dashboard** (`/`) — pooled fund, portfolio value, cash available, invested-vs-current, a category breakdown pie chart, recent transactions, and 5 per-category performance cards (Lending / Stock Market / Real Estate / Liquid Fund / Others) with invested, current value, absolute returns, XIRR, CAGR, and position count. Also where Stock Market holdings' ticker/quantity/average price and other categories' current values are manually updated.
 - **Individual Dashboard** (`/me`) — pick any member, see their contribution, ownership %, share of holdings, personal transaction history, and a "who's holding idle cash" card per member.
+- **Transaction Dashboard** (`/transactions`) — add/edit/delete, filter, sort, running balance. Supports an "Everyone (split equally)" option that fans out into one real transaction per member — equal shares for money coming in (contributions, dividends), proportional to each member's current idle cash for money going out (investments, withdrawals) so it drains actual holdings correctly instead of going negative. For Dividend/Return and Loan Repayment Received specifically, an optional "Collected by" field lets you pick who actually received the cash — the app still credits everyone's equal share for ownership/history, then auto-generates the Transfer transactions needed to move the other members' shares to whoever actually has the money, so idle cash matches reality without manual cleanup. Also supports member-to-member cash "Transfer". Shows as stacked cards on mobile, a full table on larger screens.
+- **Projects** (`/projects`) — a simple standalone board for jotting down project ideas, shown as cards (project name + a running comment thread per card, with who commented and when). Not linked to transactions, holdings, or any of the financial numbers elsewhere in the app — just a shared scratchpad.
 - **Login** — real Supabase email/password (see step 3 above). No public sign-up screen on purpose; accounts are created by whoever set up the project.
-- **Stock price sync (experimental)** — Stock Market holdings can carry a ticker, quantity, and average price. A "Refresh prices" button in the Holdings section fetches live prices from [Twelve Data](https://twelvedata.com) (needs your own free API key, entered in that panel). Confirmed via live testing: Twelve Data's free "Basic" plan only covers US stocks/forex/crypto — NSE (India) tickers need their paid "Grow" plan ($29/mo) or higher, otherwise you'll get an HTTP 404. Manual "Current value" updates in the Holdings section work regardless and are the simplest option if you don't want to pay for a data plan.
 - **Responsive design** — stacked-card layouts on mobile for tables, safe-area padding for notched phones, and an "Add to Home Screen" friendly setup.
+
+Note: an earlier experimental "live stock price sync" via Twelve Data was removed — their free tier doesn't cover NSE/India data (confirmed via live testing, would need their paid "Grow" plan or higher), so it wasn't useful here. Stock Market holdings still track ticker/quantity/average price; current value is just updated manually like every other category.
 
 ## Data model
 
 - **members**: id, name, email (matched to the Supabase Auth account), date_joined.
-- **transactions**: date, member_id, to_member_id (Transfers only), type, category, amount, status, notes, linked_asset, batch_id/batch_total/batch_co
+- **transactions**: date, member_id, to_member_id (Transfers only), type, category, amount, status, notes, linked_asset, batch_id/batch_total/batch_count/batch_split (set when created via "Everyone").
+- **holdings**: category, description, amount_invested, current_value, date_acquired, status, ticker/quantity/average_price (Stock Market only).
+- **projects**: id, name, created_by (member id), created_at.
+- **project_comments**: id, project_id (FK to projects, cascades on delete), member_id, comment, created_at.
+
+Full definitions + RLS policies are in `schema.sql`.
+
+## Tech stack
+
+React + Vite + Tailwind CSS + Recharts + React Router + Supabase (Postgres, Auth, Realtime).

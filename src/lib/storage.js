@@ -1,22 +1,8 @@
 // Supabase-backed persistence layer. All 5 members share the same Postgres
 // tables (see schema.sql), so any change here is visible to everyone via
-// DataContext's Realtime subscription. `settings` (the Twelve Data API key)
-// is the one exception -- that stays in this browser's localStorage since
-// it's a per-device convenience, not shared group data.
+// DataContext's Realtime subscription.
 
 import { supabase } from './supabaseClient'
-
-const SETTINGS_KEY = '5sg_settings'
-
-function readSettingsLocal() {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    return raw ? JSON.parse(raw) : { twelveDataApiKey: '' }
-  } catch (e) {
-    console.error('Failed to read settings from localStorage', e)
-    return { twelveDataApiKey: '' }
-  }
-}
 
 function must(error, context) {
   if (error) {
@@ -98,11 +84,37 @@ export async function deleteHolding(id) {
   return id
 }
 
-// --- Settings (API keys etc, local to this browser only) ---
-export function getSettings() {
-  return readSettingsLocal()
+// --- Projects (standalone -- not linked to transactions/holdings) ---
+export async function getProjects() {
+  const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false })
+  must(error, 'getProjects')
+  return data || []
 }
 
-export function saveSettings(settings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+export async function addProject(project) {
+  const { data, error } = await supabase.from('projects').insert(project).select().single()
+  must(error, 'addProject')
+  return data
+}
+
+export async function deleteProject(id) {
+  const { error } = await supabase.from('projects').delete().eq('id', id)
+  must(error, 'deleteProject')
+  return id
+}
+
+// --- Project comments ---
+export async function getProjectComments() {
+  const { data, error } = await supabase
+    .from('project_comments')
+    .select('*')
+    .order('created_at', { ascending: true })
+  must(error, 'getProjectComments')
+  return data || []
+}
+
+export async function addProjectComment(comment) {
+  const { data, error } = await supabase.from('project_comments').insert(comment).select().single()
+  must(error, 'addProjectComment')
+  return data
 }

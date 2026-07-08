@@ -2,9 +2,10 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const links = [
-  { to: '/', label: 'Overall', end: true },
+  { to: '/', label: 'Dashboard', end: true },
   { to: '/me', label: 'Individual' },
   { to: '/transactions', label: 'Transactions' },
+  { to: '/projects', label: 'Projects' },
 ]
 
 export default function Nav() {

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useData } from '../context/DataContext'
 import { STATUSES, INVESTMENT_CATEGORIES } from '../constants'
 import { formatCurrency } from '../utils/calculations'
-import StockSyncPanel from './StockSyncPanel'
 
 const CATEGORY_OPTIONS = INVESTMENT_CATEGORIES
 
@@ -24,8 +23,9 @@ const emptyHolding = {
 // category's transaction-based total on the Overall Dashboard.
 //
 // Stock Market holdings additionally support ticker/quantity/average price --
-// invested amount is computed as quantity x average price, and "Refresh
-// prices" (below) can auto-update current value from a live quote.
+// invested amount is computed as quantity x average price. Current value is
+// updated manually here (no live sync -- Twelve Data's free tier doesn't
+// cover NSE/India, so that experiment was removed).
 export default function HoldingsEditor() {
   const { holdings, addHolding, updateHolding, deleteHolding } = useData()
   const [open, setOpen] = useState(false)
@@ -211,7 +211,6 @@ export default function HoldingsEditor() {
                     {h.category === 'Stock Market' && h.ticker && (
                       <span className="block text-[11px] text-gray-400">
                         {h.ticker} · {h.quantity || 0} @ {formatCurrency(h.average_price)}
-                        {h.live_price ? ` · live ₹${h.live_price}` : ''}
                       </span>
                     )}
                   </td>
@@ -228,8 +227,6 @@ export default function HoldingsEditor() {
           </table>
         </div>
       )}
-
-      <StockSyncPanel />
     </div>
   )
 }
